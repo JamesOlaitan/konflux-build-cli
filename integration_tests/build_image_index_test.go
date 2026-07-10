@@ -107,13 +107,7 @@ func TestBuildImageIndex_MultipleImages(t *testing.T) {
 	SetupGomega(t)
 	var err error
 
-	// Setup registry
-	imageRegistry := NewImageRegistry()
-	err = imageRegistry.Prepare()
-	Expect(err).ToNot(HaveOccurred())
-	err = imageRegistry.Start()
-	Expect(err).ToNot(HaveOccurred())
-	defer imageRegistry.Stop()
+	imageRegistry := SetupImageRegistry(t)
 
 	// Create input data
 	baseImageRepo := imageRegistry.GetTestNamespace() + "test-image-index"
@@ -218,13 +212,7 @@ func TestBuildImageIndex_DockerFormat(t *testing.T) {
 	SetupGomega(t)
 	var err error
 
-	// Setup registry
-	imageRegistry := NewImageRegistry()
-	err = imageRegistry.Prepare()
-	Expect(err).ToNot(HaveOccurred())
-	err = imageRegistry.Start()
-	Expect(err).ToNot(HaveOccurred())
-	defer imageRegistry.Stop()
+	imageRegistry := SetupImageRegistry(t)
 
 	// Create input data
 	baseImageRepo := imageRegistry.GetTestNamespace() + "test-docker-format"
@@ -360,13 +348,7 @@ func TestBuildImageIndex_SingleImageAlwaysBuildIndex(t *testing.T) {
 	SetupGomega(t)
 	var err error
 
-	// Setup registry
-	imageRegistry := NewImageRegistry()
-	err = imageRegistry.Prepare()
-	Expect(err).ToNot(HaveOccurred())
-	err = imageRegistry.Start()
-	Expect(err).ToNot(HaveOccurred())
-	defer imageRegistry.Stop()
+	imageRegistry := SetupImageRegistry(t)
 
 	// Create input data
 	baseImageRepo := imageRegistry.GetTestNamespace() + "test-single-always"
@@ -436,13 +418,7 @@ func TestBuildImageIndex_ResultPaths(t *testing.T) {
 	SetupGomega(t)
 	var err error
 
-	// Setup registry
-	imageRegistry := NewImageRegistry()
-	err = imageRegistry.Prepare()
-	Expect(err).ToNot(HaveOccurred())
-	err = imageRegistry.Start()
-	Expect(err).ToNot(HaveOccurred())
-	defer imageRegistry.Stop()
+	imageRegistry := SetupImageRegistry(t)
 
 	// Create input data
 	baseImageRepo := imageRegistry.GetTestNamespace() + "test-result-paths"
@@ -530,13 +506,7 @@ func TestBuildImageIndex_FormatMismatch(t *testing.T) {
 	SetupGomega(t)
 	var err error
 
-	// Setup registry
-	imageRegistry := NewImageRegistry()
-	err = imageRegistry.Prepare()
-	Expect(err).ToNot(HaveOccurred())
-	err = imageRegistry.Start()
-	Expect(err).ToNot(HaveOccurred())
-	defer imageRegistry.Stop()
+	imageRegistry := SetupImageRegistry(t)
 
 	// Create input data
 	baseImageRepo := imageRegistry.GetTestNamespace() + "test-format-mismatch"
@@ -597,13 +567,7 @@ func TestBuildImageIndex_ImagesWithTagAndDigest(t *testing.T) {
 	SetupGomega(t)
 	var err error
 
-	// Setup registry
-	imageRegistry := NewImageRegistry()
-	err = imageRegistry.Prepare()
-	Expect(err).ToNot(HaveOccurred())
-	err = imageRegistry.Start()
-	Expect(err).ToNot(HaveOccurred())
-	defer imageRegistry.Stop()
+	imageRegistry := SetupImageRegistry(t)
 
 	// Create input data
 	baseImageRepo := imageRegistry.GetTestNamespace() + "test-tag-and-digest"

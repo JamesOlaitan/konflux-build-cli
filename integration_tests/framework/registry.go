@@ -87,6 +87,35 @@ func stripRegistryDomain(imageName string) string {
 	return strings.Join(parts, "/")
 }
 
+// Check if the given manifest exists in the registry by sending
+// a HEAD request to the registry's manifest endpoint.
+func CheckManifestExistence(registry ImageRegistry, imageName, digest string) (bool, error) {
+	imageName = stripRegistryDomain(imageName)
+
+	url := fmt.Sprintf("https://%s/v2/%s/manifests/%s", registry.GetRegistryDomain(), imageName, digest)
+	req, err := http.NewRequest("HEAD", url, nil)
+	if err != nil {
+		return false, err
+	}
+
+	req.Header["Accept"] = allContainerMediaTypes
+
+	resp, err := registry.DoRequest(req)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return true, nil
+	case http.StatusNotFound:
+		return false, nil
+	default:
+		return false, fmt.Errorf("unexpected response code (expected 200 or 404): %d", resp.StatusCode)
+	}
+}
+
 // Check if the given tag exists in the registry by sending
 // a HEAD request to the registry's manifest endpoint.
 func CheckTagExistence(registry ImageRegistry, imageName, tag string) (bool, error) {
