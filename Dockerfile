@@ -27,7 +27,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -o konfl
 
 # Use the Konflux task-runner image as base for the Konflux Build CLI.
 # For more details and updates, refer to https://quay.io/konflux-ci/task-runner
-FROM quay.io/konflux-ci/task-runner:2.1.0@sha256:c34c933c269e2401bb042fe69e2999cf288331b6586d4f4eca9c845270d9b1f9
+FROM quay.io/konflux-ci/task-runner:3.0.0@sha256:9f4151ff21f4c14b9151582c91a5542140bbbb6dca7861cd42081006840bec05
 COPY --from=builder /workspace/konflux-build-cli /usr/local/bin/konflux-build-cli
 USER 65532:65532
 
