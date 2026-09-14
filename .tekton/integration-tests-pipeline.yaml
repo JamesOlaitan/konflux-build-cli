@@ -20,7 +20,7 @@ spec:
             value: https://github.com/konflux-ci/tekton-integration-catalog.git
           # using a stable version of fedora-vm-provision task, need to be updated when next stable version of the task is available
           - name: revision
-            value: 7f46023f16f0dfef66be9164bebc1c516f71c601
+            value: 1eb7c59d5530fd1f37d64ace8eea25f2649e887d
           - name: pathInRepo
             value: tasks/mapt-oci/fedora-virtual-machine/provision/0.1/fedora-vm-provision.yaml
       params:
@@ -40,6 +40,11 @@ spec:
           value: $(context.pipelineRun.uid)
         - name: spot
           value: 'true'
+        - name: compute-families
+          # Limit selectable machine types to prevent mapt from trying to use an unavailable type.
+          # The m* families are general purpose, with a 4:1 memory:cpu ratio
+          # (important, because the task looks for a machine with 16Gi memory and 4 CPU by default).
+          value: m5,m5a,m5d,m6a,m6i
         - name: debug
           value: 'false'
     - name: run-integration-tests
@@ -131,7 +136,7 @@ spec:
             value: https://github.com/konflux-ci/tekton-integration-catalog.git
           # using a stable version of fedora-vm-deprovision task, need to be updated when next stable version of the task is available
           - name: revision
-            value: 7f46023f16f0dfef66be9164bebc1c516f71c601
+            value: 1eb7c59d5530fd1f37d64ace8eea25f2649e887d
           - name: pathInRepo
             value: tasks/mapt-oci/fedora-virtual-machine/deprovision/0.1/fedora-vm-deprovision.yaml
       params:
