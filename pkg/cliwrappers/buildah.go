@@ -712,6 +712,12 @@ type BuildahManifestAddArgs struct {
 	ManifestName string
 	ImageRef     string
 	All          bool
+	// Arch, OS and Variant set the list entry's platform explicitly. buildah
+	// cannot infer platform from an artifact's empty config, so without these
+	// the entry is left with a null platform.
+	Arch    string
+	OS      string
+	Variant string
 }
 
 // ManifestAdd adds an image to a manifest list
@@ -727,6 +733,16 @@ func (b *BuildahCli) ManifestAdd(args *BuildahManifestAddArgs) error {
 
 	if args.All {
 		buildahArgs = append(buildahArgs, "--all")
+	}
+
+	if args.Arch != "" {
+		buildahArgs = append(buildahArgs, "--arch", args.Arch)
+	}
+	if args.OS != "" {
+		buildahArgs = append(buildahArgs, "--os", args.OS)
+	}
+	if args.Variant != "" {
+		buildahArgs = append(buildahArgs, "--variant", args.Variant)
 	}
 
 	buildahLog.Debugf("Running command:\nbuildah %s", strings.Join(buildahArgs, " "))
