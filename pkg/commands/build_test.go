@@ -597,17 +597,17 @@ func Test_Build_validateParams(t *testing.T) {
 	}
 }
 
-func Test_Build_resolveSourceDateEpoch(t *testing.T) {
+func Test_Build_effectiveSourceDateEpoch(t *testing.T) {
 	g := NewWithT(t)
 
-	t.Run("should replace the sentinel with the commit timestamp", func(t *testing.T) {
+	t.Run("should use the commit timestamp for the sentinel", func(t *testing.T) {
 		c := &Build{Params: &BuildParams{
 			SourceDateEpoch: sourceDateEpochFromCommitTimestamp,
 			CommitTimestamp: "1779309030",
 		}}
 
-		c.resolveSourceDateEpoch()
-		g.Expect(c.Params.SourceDateEpoch).To(Equal("1779309030"))
+		g.Expect(c.effectiveSourceDateEpoch()).To(Equal("1779309030"))
+		g.Expect(c.Params.SourceDateEpoch).To(Equal(sourceDateEpochFromCommitTimestamp))
 	})
 
 	t.Run("should leave an explicit source-date-epoch alone", func(t *testing.T) {
@@ -616,8 +616,7 @@ func Test_Build_resolveSourceDateEpoch(t *testing.T) {
 			CommitTimestamp: "1779309030",
 		}}
 
-		c.resolveSourceDateEpoch()
-		g.Expect(c.Params.SourceDateEpoch).To(Equal("1234567890"))
+		g.Expect(c.effectiveSourceDateEpoch()).To(Equal("1234567890"))
 	})
 
 	t.Run("should leave an empty source-date-epoch empty", func(t *testing.T) {
@@ -625,8 +624,7 @@ func Test_Build_resolveSourceDateEpoch(t *testing.T) {
 			CommitTimestamp: "1779309030",
 		}}
 
-		c.resolveSourceDateEpoch()
-		g.Expect(c.Params.SourceDateEpoch).To(BeEmpty())
+		g.Expect(c.effectiveSourceDateEpoch()).To(BeEmpty())
 	})
 }
 
@@ -1759,6 +1757,36 @@ func Test_Build_Run(t *testing.T) {
 		g.Expect(isCreateResultJsonCalled).To(BeTrue())
 	})
 
+	t.Run("should use commit timestamp for buildah and image metadata", func(t *testing.T) {
+		beforeEach()
+		c.Params.Push = false
+		c.Params.SourceDateEpoch = sourceDateEpochFromCommitTimestamp
+		c.Params.CommitTimestamp = "1767225600" // 2026-01-01
+
+		buildCalled := false
+		_mockBuildahCli.BuildFunc = func(args *cliwrappers.BuildahBuildArgs) error {
+			buildCalled = true
+			g.Expect(args.SourceDateEpoch).To(Equal("1767225600"))
+			g.Expect(args.Labels).To(ContainElement("org.opencontainers.image.created=2026-01-01T00:00:00Z"))
+			g.Expect(args.Annotations).To(ContainElement("org.opencontainers.image.created=2026-01-01T00:00:00Z"))
+			return nil
+		}
+
+		g.Expect(c.run()).To(Succeed())
+		g.Expect(buildCalled).To(BeTrue())
+		g.Expect(c.Params.SourceDateEpoch).To(Equal(sourceDateEpochFromCommitTimestamp))
+	})
+
+	t.Run("should reject a non-numeric commit timestamp", func(t *testing.T) {
+		beforeEach()
+		c.Params.SourceDateEpoch = sourceDateEpochFromCommitTimestamp
+		c.Params.CommitTimestamp = "not-a-timestamp"
+
+		err := c.run()
+		g.Expect(err).To(HaveOccurred())
+		g.Expect(err.Error()).To(ContainSubstring("determining build timestamp: parsing source-date-epoch:"))
+	})
+
 	t.Run("should successfully build without pushing", func(t *testing.T) {
 		beforeEach()
 		c.Params.Push = false
@@ -2773,23 +2801,6 @@ func Test_Build_processLabelsAndAnnotations(t *testing.T) {
 		))
 	})
 
-	t.Run("should use source-date-epoch resolved from commit-timestamp", func(t *testing.T) {
-		c := &Build{
-			Params: &BuildParams{
-				SourceDateEpoch: sourceDateEpochFromCommitTimestamp,
-				CommitTimestamp: "1767225600", // 2026-01-01
-			},
-		}
-		c.resolveSourceDateEpoch()
-
-		err := c.processLabelsAndAnnotations()
-		g.Expect(err).ToNot(HaveOccurred())
-
-		g.Expect(c.mergedLabels).To(ContainElement(
-			"org.opencontainers.image.created=2026-01-01T00:00:00Z",
-		))
-	})
-
 	t.Run("should add quay.expires-after label when provided", func(t *testing.T) {
 		c := &Build{
 			Params: &BuildParams{
@@ -2822,20 +2833,6 @@ func Test_Build_processLabelsAndAnnotations(t *testing.T) {
 				SourceDateEpoch: "1767225600.5",
 			},
 		}
-
-		err := c.processLabelsAndAnnotations()
-		g.Expect(err).To(HaveOccurred())
-		g.Expect(err.Error()).To(ContainSubstring("determining build timestamp: parsing source-date-epoch:"))
-	})
-
-	t.Run("should return error when commit-timestamp is not a number", func(t *testing.T) {
-		c := &Build{
-			Params: &BuildParams{
-				SourceDateEpoch: sourceDateEpochFromCommitTimestamp,
-				CommitTimestamp: "not-a-timestamp",
-			},
-		}
-		c.resolveSourceDateEpoch()
 
 		err := c.processLabelsAndAnnotations()
 		g.Expect(err).To(HaveOccurred())

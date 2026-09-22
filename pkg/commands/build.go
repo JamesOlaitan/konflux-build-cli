@@ -669,6 +669,13 @@ func (c *Build) effectiveContextDir() string {
 	}
 }
 
+func (c *Build) effectiveSourceDateEpoch() string {
+	if c.Params.SourceDateEpoch == sourceDateEpochFromCommitTimestamp {
+		return c.Params.CommitTimestamp
+	}
+	return c.Params.SourceDateEpoch
+}
+
 func (c *Build) cleanup() {
 	if c.tempWorkdir != "" {
 		if err := os.RemoveAll(c.tempWorkdir); err != nil {
@@ -806,8 +813,6 @@ func (c *Build) run() error {
 		return err
 	}
 
-	c.resolveSourceDateEpoch()
-
 	if err := c.detectBuildahVersion(); err != nil {
 		return err
 	}
@@ -925,30 +930,7 @@ func (c *Build) run() error {
 	return nil
 }
 
-// resolveSourceDateEpoch replaces the :from-commit-timestamp: value of
-// source-date-epoch with the actual commit timestamp. The user opts into
-// the substitution by writing the special value. An empty or unset
-// source-date-epoch stays empty.
-//
-// Callers must run validateParams first: it guarantees commit-timestamp is
-// set whenever the sentinel is used, so this never needs to fail. Format
-// validation of the resulting value happens once, downstream, wherever
-// source-date-epoch is actually parsed (getBuildTimeRFC3339) -- the same
-// path an explicit numeric source-date-epoch already goes through.
-func (c *Build) resolveSourceDateEpoch() {
-	if c.Params.SourceDateEpoch != sourceDateEpochFromCommitTimestamp {
-		return
-	}
-
-	l.Logger.Infof("Resolved source-date-epoch to commit timestamp %s", c.Params.CommitTimestamp)
-	c.Params.SourceDateEpoch = c.Params.CommitTimestamp
-}
-
 func (c *Build) validateParams() error {
-	if c.Params.SourceDateEpoch == sourceDateEpochFromCommitTimestamp && c.Params.CommitTimestamp == "" {
-		return fmt.Errorf("source-date-epoch is %s but commit-timestamp is not set", sourceDateEpochFromCommitTimestamp)
-	}
-
 	if !common.IsImageNameValid(common.GetImageName(c.Params.OutputRef)) {
 		return fmt.Errorf("output-ref '%s' is invalid", c.Params.OutputRef)
 	}
@@ -1013,6 +995,10 @@ func (c *Build) validateParams() error {
 		if !resolvedContext.IsRelativeTo(resolvedSource) {
 			return fmt.Errorf("context directory '%s' is outside source directory '%s'", c.Params.Context, c.Params.Source)
 		}
+	}
+
+	if c.Params.SourceDateEpoch == sourceDateEpochFromCommitTimestamp && c.Params.CommitTimestamp == "" {
+		return fmt.Errorf("source-date-epoch is %s but commit-timestamp is not set", sourceDateEpochFromCommitTimestamp)
 	}
 
 	if c.Params.LegacyBuildTimestamp != "" && c.Params.SourceDateEpoch != "" {
@@ -2077,8 +2063,8 @@ func (c *Build) processLabelsAndAnnotations() error {
 
 func (c *Build) getBuildTimeRFC3339() (string, error) {
 	var buildTime time.Time
-	if c.Params.SourceDateEpoch != "" {
-		timestamp, err := strconv.ParseInt(c.Params.SourceDateEpoch, 10, 64)
+	if sourceDateEpoch := c.effectiveSourceDateEpoch(); sourceDateEpoch != "" {
+		timestamp, err := strconv.ParseInt(sourceDateEpoch, 10, 64)
 		if err != nil {
 			return "", fmt.Errorf("parsing source-date-epoch: %w", err)
 		}
@@ -2754,7 +2740,7 @@ func (c *Build) buildImage() (err error) {
 		Envs:             c.Params.Envs,
 		Labels:           c.mergedLabels,
 		Annotations:      c.mergedAnnotations,
-		SourceDateEpoch:  c.Params.SourceDateEpoch,
+		SourceDateEpoch:  c.effectiveSourceDateEpoch(),
 		RewriteTimestamp: c.Params.RewriteTimestamp,
 		ExtraArgs:        c.Params.ExtraArgs,
 		InheritLabels:    &c.Params.InheritLabels,
