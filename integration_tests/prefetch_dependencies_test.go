@@ -15,7 +15,7 @@ import (
 
 const (
 	hermetoLatestImage             = "quay.io/konflux-ci/hermeto:latest"
-	hermetoIntegrationTestsRepoURL = "https://github.com/hermetoproject/integration-tests.git"
+	hermetoIntegrationTestsRepoURL = "https://github.com/hermetoproject/hermeto.git"
 )
 
 type prefetchDependenciesTestParams struct {
@@ -26,9 +26,9 @@ type prefetchDependenciesTestParams struct {
 	EnvFiles            []string
 }
 
-func cloneGitRepo(url, branch, output string) error {
+func cloneGitRepo(url, output string) error {
 	executor := cliwrappers.NewCliExecutor()
-	_, _, _, err := executor.Execute(cliwrappers.Command("git", "clone", url, output, "--depth=1", "--branch", branch))
+	_, _, _, err := executor.Execute(cliwrappers.Command("git", "clone", url, output, "--depth=1"))
 	return err
 }
 
@@ -106,13 +106,12 @@ func TestPrefetchDependencies(t *testing.T) {
 	t.Run("should prefetch dependencies with RPM input", func(t *testing.T) {
 		tempDir := setupContext(t)
 
-		branch := "rpm/e2e"
 		repoPath := filepath.Join(tempDir, "repo")
-		Expect(cloneGitRepo(hermetoIntegrationTestsRepoURL, branch, repoPath)).To(Succeed())
+		Expect(cloneGitRepo(hermetoIntegrationTestsRepoURL, repoPath)).To(Succeed())
 
 		params := prefetchDependenciesTestParams{
 			SourceDir: repoPath,
-			Input:     `{"packages": [{"type": "rpm"}]}`,
+			Input:     `{"packages": [{"type": "rpm", "path": "tests/integration/rpm/scenarios/rpm_e2e/in"}]}`,
 		}
 		Expect(runPrefetchDependencies(params)).To(Succeed())
 
@@ -157,13 +156,12 @@ func TestPrefetchDependencies(t *testing.T) {
 	t.Run("should generate environment files with specified formats", func(t *testing.T) {
 		tempDir := setupContext(t)
 
-		branch := "gomod/without-deps"
 		repoPath := filepath.Join(tempDir, "repo")
-		Expect(cloneGitRepo(hermetoIntegrationTestsRepoURL, branch, repoPath)).To(Succeed())
+		Expect(cloneGitRepo(hermetoIntegrationTestsRepoURL, repoPath)).To(Succeed())
 
 		params := prefetchDependenciesTestParams{
 			SourceDir:           repoPath,
-			Input:               `{"packages": [{"type": "gomod"}]}`,
+			Input:               `{"packages": [{"type": "gomod", "path": "tests/integration/gomod/scenarios/gomod_without_deps/in"}]}`,
 			OutputDirMountPoint: "/tmp",
 			EnvFiles:            []string{"hermeto.env", "prefetch.env", "prefetch-env.json"},
 		}
